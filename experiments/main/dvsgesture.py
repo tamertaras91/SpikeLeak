@@ -1,5 +1,10 @@
 #!/usr/bin/env python
+# coding: utf-8
 
+# # SNN Gradient Leakage — Mini-Batch Experimental Harness
+# 
+# This notebook is the cleaned experimental version of the working DVS128 Gesture mini-batch attack.
+# 
 # It keeps the existing two-stage methodology unchanged:
 # 
 # 1. **Stage 1 — algebraic candidate recovery**
@@ -64,8 +69,6 @@ from pathlib import Path
 _REPO_IMPORT_ROOT = Path(__file__).resolve().parents[2] if "__file__" in globals() else Path.cwd()
 if str(_REPO_IMPORT_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_IMPORT_ROOT))
-
-from src.local_datasets import LocalDVSGesture
 
 import numpy as np
 import pandas as pd
@@ -142,7 +145,13 @@ BETA = 0.90
 U_THR = 1.0
 
 
-
+# FAST-RUNNER OPTIMIZATIONS
+# -------------------------
+# - Rank/statistics reported only for x0 and s1.
+# - Stage 1 reconstructs only x0 and s1.
+# - Stage 2 uses s1 only; each x0 candidate test stops after fc1 + LIF1.
+# - One forward/backward pass is shared by rank diagnostics and Stage 1.
+# - exact_temporal_batch_match is not computed or reported.
 
 # Attack target and Stage-2 cover layers
 TARGET_LAYER = "x0"
@@ -168,7 +177,7 @@ USE_DUPLICATE_ELIMINATION = True
 
 UNAVERAGE_GRADIENTS_BY_BATCH = True
 
-MILP_TIME_LIMIT = float(os.environ.get("SNN_MILP_TIME_LIMIT", "300000.0"))
+MILP_TIME_LIMIT = float(os.environ.get("SNN_MILP_TIME_LIMIT", "300.0"))
 SELECTION_MODE = "residual"
 ENUMERATION_MODE = "guided"
 GUIDED_RANDOM_WEIGHT = 1e-10
@@ -180,6 +189,8 @@ MAX_SEQUENCE_SOLUTIONS = int(os.environ.get("SNN_MAX_SEQUENCE_SOLUTIONS", "5"))
 # Files
 REPO_ROOT = Path(os.environ.get("SNN_REPO_ROOT", Path(__file__).resolve().parents[2] if "__file__" in globals() else Path.cwd())).resolve()
 DATA_DIR = REPO_ROOT / "data"
+DVSGESTURE_TRAIN_URL = "https://ndownloader.figshare.com/files/38022171"
+DVSGESTURE_TEST_URL = "https://ndownloader.figshare.com/files/38020584"
 RESULTS_DIR = REPO_ROOT / "results" / "reproduced" / "dvsgesture"
 SUMMARY_CSV = RESULTS_DIR / "experiment_summary.csv"
 LAYER_CSV = RESULTS_DIR / "layer_diagnostics.csv"
@@ -420,10 +431,33 @@ def build_model(seed=SEED, device=DEVICE, w_gain=4.0, b_val=0.1):
 # ============================================================
 
 def build_dvsgesture_dataset(T, save_to=DATA_DIR, train=True):
-    """Local-only DVS128 Gesture loader; no download is attempted."""
-    split = "ibmGestureTrain" if train else "ibmGestureTest"
-    root = Path(save_to) / "DVSGesture" / split
-    return LocalDVSGesture(root=root, T=int(T), denoise_filter_time=10000)
+    """
+    Build DVS128 Gesture with exactly T temporal bins.
+
+    If the dataset is not already cached under ``data/DVSGesture``, Tonic
+    downloads/extracts it automatically. Subsequent runs reuse the cache.
+
+    The explicit Figshare endpoints below avoid stale historical download
+    links used by some Tonic releases.
+    """
+    tonic.datasets.DVSGesture.train_url = DVSGESTURE_TRAIN_URL
+    tonic.datasets.DVSGesture.test_url = DVSGESTURE_TEST_URL
+
+    sensor_size = tonic.datasets.DVSGesture.sensor_size
+
+    frame_transform = transforms.Compose([
+        transforms.Denoise(filter_time=10000),
+        transforms.ToFrame(
+            sensor_size=sensor_size,
+            n_time_bins=int(T),
+        ),
+    ])
+
+    return tonic.datasets.DVSGesture(
+        save_to=str(save_to),
+        train=train,
+        transform=frame_transform,
+    )
 
 def _fit_time_length(frames, T_target):
     frames = np.asarray(frames)

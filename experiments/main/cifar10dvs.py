@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# # SNN Gradient Leakage — Mini-Batch Experimental Harness
+# 
+# This script is the cleaned experimental version of the CIFAR10-DVS mini-batch attack using a local flat subset of AEDAT files.
+# 
+# It keeps the existing two-stage methodology unchanged:
 # 
 # 1. **Stage 1 — algebraic candidate recovery**
 #    - uses only the observed FC weight/bias gradients,
@@ -148,7 +153,13 @@ BETA = 0.90
 U_THR = 1.0
 
 
-
+# FAST-RUNNER OPTIMIZATIONS
+# -------------------------
+# - Rank/statistics reported only for x0 and s1.
+# - Stage 1 reconstructs only x0 and s1.
+# - Stage 2 uses s1 only; each x0 candidate test stops after fc1 + LIF1.
+# - One forward/backward pass is shared by rank diagnostics and Stage 1.
+# - exact_temporal_batch_match is not computed or reported.
 
 # Attack target and Stage-2 cover layers
 TARGET_LAYER = "x0"
@@ -174,7 +185,7 @@ USE_DUPLICATE_ELIMINATION = True
 
 UNAVERAGE_GRADIENTS_BY_BATCH = True
 
-MILP_TIME_LIMIT = float(os.environ.get("SNN_MILP_TIME_LIMIT", "30000.0"))
+MILP_TIME_LIMIT = float(os.environ.get("SNN_MILP_TIME_LIMIT", "300.0"))
 SELECTION_MODE = "residual"
 ENUMERATION_MODE = "guided"
 GUIDED_RANDOM_WEIGHT = 1e-10
@@ -187,7 +198,16 @@ MAX_SEQUENCE_SOLUTIONS = int(os.environ.get("SNN_MAX_SEQUENCE_SOLUTIONS", "5"))
 REPO_ROOT = Path(os.environ.get("SNN_REPO_ROOT", Path(__file__).resolve().parents[2] if "__file__" in globals() else Path.cwd())).resolve()
 DATA_DIR = REPO_ROOT / "data"
 
-
+# Expected LOCAL SUBSET layout (flat folder):
+#
+#   data/CIFAR10/
+#       cifar10_dog_0.aedat
+#       cifar10_airplane_3.aedat
+#       cifar10_cat_7.aedat
+#       ...
+#
+# Put only the representative .aedat files you want to use on the server.
+# Labels are parsed from the filename: cifar10_<class>_<id>.aedat.
 CIFAR10DVS_LOCAL_DIR = DATA_DIR / "CIFAR10"
 
 RESULTS_DIR = REPO_ROOT / "results" / "reproduced" / "cifar10dvs"

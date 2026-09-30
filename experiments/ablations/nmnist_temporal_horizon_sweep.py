@@ -67,8 +67,6 @@ from pathlib import Path
 _REPO_IMPORT_ROOT = Path(__file__).resolve().parents[2] if "__file__" in globals() else Path.cwd()
 if str(_REPO_IMPORT_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_IMPORT_ROOT))
-from src.local_datasets import LocalNMNIST
-
 import numpy as np
 import pandas as pd
 import torch
@@ -406,10 +404,25 @@ def build_model(seed=SEED, device=DEVICE, w_gain=4.0, b_val=0.1):
 # ============================================================
 
 def build_nmnist_dataset(T, save_to=DATA_DIR, train=True):
-    """Local-only N-MNIST loader; no download is attempted."""
-    split = "Train" if train else "Test"
-    root = Path(save_to) / "NMNIST" / split
-    return LocalNMNIST(root=root, T=int(T), denoise_filter_time=10000)
+    """
+    Build N-MNIST with exactly T time bins.
+
+    Tonic downloads/extracts the dataset automatically if it is not already
+    cached under the repository ``data`` folder.
+    """
+    sensor_size = tonic.datasets.NMNIST.sensor_size
+    frame_transform = transforms.Compose([
+        transforms.Denoise(filter_time=10000),
+        transforms.ToFrame(
+            sensor_size=sensor_size,
+            n_time_bins=int(T),
+        ),
+    ])
+    return tonic.datasets.NMNIST(
+        save_to=str(save_to),
+        train=train,
+        transform=frame_transform,
+    )
 
 def _fit_time_length(frames, T_target):
     frames = np.asarray(frames)

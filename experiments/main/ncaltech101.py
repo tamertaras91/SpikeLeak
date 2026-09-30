@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
+# # SNN Gradient Leakage — Mini-Batch Experimental Harness
+# 
+# Fast mini-batch analytical gradient inversion experiments for N-Caltech101.
+# 
+# It keeps the existing two-stage methodology unchanged:
+# 
 # 1. **Stage 1 — algebraic candidate recovery**
 #    - uses only the observed FC weight/bias gradients,
 #    - bias augmentation,
@@ -64,8 +69,6 @@ from pathlib import Path
 _REPO_IMPORT_ROOT = Path(__file__).resolve().parents[2] if "__file__" in globals() else Path.cwd()
 if str(_REPO_IMPORT_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_IMPORT_ROOT))
-
-from src.local_datasets import LocalNCaltech101
 
 import numpy as np
 import pandas as pd
@@ -143,7 +146,13 @@ BETA = 0.90
 U_THR = 1.0
 
 
-
+# FAST-RUNNER OPTIMIZATIONS
+# -------------------------
+# - Rank/statistics reported only for x0 and s1.
+# - Stage 1 reconstructs only x0 and s1.
+# - Stage 2 uses s1 only; each x0 candidate test stops after fc1 + LIF1.
+# - One forward/backward pass is shared by rank diagnostics and Stage 1.
+# - exact_temporal_batch_match is not computed or reported.
 
 # Attack target and Stage-2 cover layers
 TARGET_LAYER = "x0"
@@ -169,7 +178,7 @@ USE_DUPLICATE_ELIMINATION = True
 
 UNAVERAGE_GRADIENTS_BY_BATCH = True
 
-MILP_TIME_LIMIT = float(os.environ.get("SNN_MILP_TIME_LIMIT", "3000000.0"))
+MILP_TIME_LIMIT = float(os.environ.get("SNN_MILP_TIME_LIMIT", "300.0"))
 SELECTION_MODE = "residual"
 ENUMERATION_MODE = "guided"
 GUIDED_RANDOM_WEIGHT = 1e-10
@@ -418,9 +427,28 @@ def build_model(seed=SEED, device=DEVICE, w_gain=4.0, b_val=0.1):
 # ============================================================
 
 def build_ncaltech101_dataset(T, save_to=DATA_DIR):
-    """Local-only N-Caltech101 loader; no download is attempted."""
-    root = Path(save_to) / "NCALTECH101" / "Caltech101"
-    return LocalNCaltech101(root=root, T=int(T), denoise_filter_time=10000)
+    """
+    Build N-Caltech101 with exactly T time bins.
+
+    If the dataset is not already cached under ``data/NCALTECH101``, Tonic
+    downloads/extracts it automatically. Subsequent runs reuse the cache.
+    """
+    frame_transform = transforms.Compose([
+        transforms.Denoise(filter_time=10000),
+        transforms.Downsample(
+            sensor_size=NATIVE_SENSOR_SIZE,
+            target_size=(TARGET_H, TARGET_W),
+        ),
+        transforms.ToFrame(
+            sensor_size=(TARGET_H, TARGET_W, POLARITY_CHANNELS),
+            n_time_bins=int(T),
+        ),
+    ])
+
+    return tonic.datasets.NCALTECH101(
+        save_to=str(save_to),
+        transform=frame_transform,
+    )
 
 def build_ncaltech101_class_mapping(dataset):
     """Stable class-name -> integer mapping for CrossEntropyLoss."""

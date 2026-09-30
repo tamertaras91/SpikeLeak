@@ -75,44 +75,77 @@ search_exhausted
 
 These should not be silently converted into missing rows.
 
+## 6. Reference results
 
-
-
-
-## N-MNIST B=1 qualitative figures
-
-Run:
-
-```bash
-python scripts/run_setting.py --dataset nmnist --T 8 --B 1 --seed 0
-```
-
-On a successful reconstruction, the runner keeps the aggregate figures:
+Place the exact CSVs and images used in the paper in:
 
 ```text
-nmnist_T8_B1_seed0_original.png
-nmnist_T8_B1_seed0_reconstructed.png
+results/reference/
+figures/reference/
 ```
 
-and additionally writes the time-resolved event-sequence figures:
+They are intentionally left empty in this initial artifact because no final
+paper-result exports were supplied with the repository-building request.
+
+
+
+
+## B=1 event-sequence figures for all main datasets
+
+For a successful `B=1` run on any main dataset runner, the aggregate figures are
+kept:
 
 ```text
-nmnist_T8_B1_seed0_original_events.png
-nmnist_T8_B1_seed0_reconstructed_events.png
+<experiment_id>_original.png
+<experiment_id>_reconstructed.png
 ```
 
-
-
-
-
-## Local-data-only execution
-
+and the repository additionally writes time-resolved event-sequence figures:
 
 ```text
-data/NMNIST/Train
-data/DVSGesture/ibmGestureTrain
-data/NCALTECH101/Caltech101
-data/CIFAR10
+<experiment_id>_original_events.png
+<experiment_id>_reconstructed_events.png
+```
+
+This now applies to:
+
+```text
+nmnist
+dvsgesture
+ncaltech101
+cifar10dvs
 ```
 
 
+## Diagnosing long-running settings
+
+All main runners now provide live stage checkpoints. The last terminal line
+therefore identifies whether a long run is currently in:
+
+- dataset loading;
+- batch loading/binarization;
+- model allocation;
+- forward/backward and rank diagnostics;
+- a specific Stage-I MILP solve;
+- Stage-II temporal search.
+
+The launcher is unbuffered, so these messages should appear immediately.
+
+For DVS128 Gesture and CIFAR10-DVS, batch size is not the main determinant of
+model-allocation cost because their first FC layer is `32768 -> 7384`.
+Run `scripts/preflight.py` to inspect the approximate float64 parameter
+footprint before executing the attack.
+
+
+
+
+## Dataset acquisition
+
+The artifact intentionally keeps the Git repository small.
+
+`N-MNIST`, `DVS128 Gesture`, and `N-Caltech101` are acquired through Tonic
+when first used and cached under `data/`. Their cache directories are ignored
+by Git.
+
+`CIFAR10-DVS` is not downloaded automatically; the experiment reads the
+repository-local `.aedat` files from `data/CIFAR10/`.
