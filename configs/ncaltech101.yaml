@@ -1,0 +1,31 @@
+dataset: N-Caltech101
+native_sensor_shape: [2, 180, 240]
+processed_input_shape: [2, 64, 64]
+input_dimension: 8192
+architecture: [8192, 1024, 512, 256, 101]
+num_classes: 101
+attack:
+  target_layer: x0
+  cover_layers: [s1]
+  dtype: float64
+
+neuron:
+  model: LIF
+  beta: 0.90
+  threshold: 1.0
+  surrogate: fast_sigmoid
+
+stage1:
+  max_pool: 1000
+  eps_eq: 1.0e-8
+  eps_proj: 1.0e-7
+  zero_col_tol: 1.0e-12
+  one_atol: 1.0e-13
+  one_rtol: 1.0e-10
+  duplicate_decimals: 12
+  selection_mode: residual
+  enumeration_mode: guided
+
+stage2:
+  max_nodes: 2000000
+  max_sequence_solutions: 5

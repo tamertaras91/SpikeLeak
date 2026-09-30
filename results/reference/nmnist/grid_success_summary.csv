@@ -1,0 +1,2 @@
+num_settings,reconstruction_success_count,reconstruction_success_rate,reconstruction_success_rate_pct,mean_x0_true_candidate_recovery_rate,mean_x0_true_candidate_recovery_rate_pct,mean_s1_true_candidate_recovery_rate,mean_s1_true_candidate_recovery_rate_pct
+1,1,1.0,100.0,1.0,100.0,1.0,100.0

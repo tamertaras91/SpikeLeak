@@ -1,0 +1,3 @@
+attack,success,bit_accuracy,f1,hamming_distance,runtime_s,optimization_steps,gradient_matching_loss
+Our analytical SNN attack,True,1.0,1.0,0,0.4363757999963127,0,
+"DLG-style optimization (known label, all gradients)",False,0.5025951557093425,0.15003695491500368,9200,29.07399499998428,1000,0.46535256481595955
