@@ -10,23 +10,30 @@ produce the reported results, while a small launcher provides a uniform
 interface for reviewer-selected settings.
 
 
-## Local datasets: no downloads
+## Dataset setup
 
-The artifact is configured to read the datasets already stored under `data/`.
-It does **not** invoke Tonic's automatic dataset download paths.
+To keep the repository small, only **CIFAR10-DVS** is expected to remain in
+the repository's `data/` folder.
 
-Expected folders:
+The other three datasets are downloaded automatically by Tonic on first use
+and cached locally:
 
 ```text
-data/NMNIST/Train
-data/DVSGesture/ibmGestureTrain
-data/NCALTECH101/Caltech101
-data/CIFAR10
+N-MNIST
+DVS128 Gesture
+N-Caltech101
 ```
 
-CIFAR10-DVS `.aedat` files are read directly from `data/CIFAR10/`.
-Run `python scripts/preflight.py --dataset <name>` before an experiment to
-verify the local folder and file count. See `data/README.md`.
+Their cache folders are excluded through `.gitignore`, so downloading them does
+not make the Git repository larger.
+
+CIFAR10-DVS must be placed under:
+
+```text
+data/CIFAR10/
+```
+
+See `data/README.md` for details.
 
 ## Quick start
 
@@ -34,6 +41,11 @@ verify the local folder and file count. See `data/README.md`.
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+### Windows note
+On Windows, some Python dependencies may need
+to be built from source if a compatible pre-built wheel is unavailable. In
+that case, Microsoft C++ Build Tools are required.
 
 python scripts/check_repository.py
 ```
@@ -63,63 +75,33 @@ The experiments may be computationally expensive. See
 `docs/REPRODUCIBILITY.md` before running the full sweeps.
 
 
-### N-MNIST single-example qualitative output
 
-The single-example setting is supported directly:
+### B=1 qualitative output for all four datasets
 
-```bash
-python scripts/run_setting.py --dataset nmnist --T 8 --B 1 --seed 0
-```
+For a successful `B=1` run on **any** main dataset runner (`nmnist`,
+`dvsgesture`, `ncaltech101`, or `cifar10dvs`), the repository now saves:
 
-For a successful `B=1` run, the N-MNIST runner now saves **both**:
+1. temporally aggregated original/reconstructed event images; and
+2. frame-by-frame event-sequence figures.
 
-1. the temporally aggregated original/reconstructed event images; and
-2. the frame-by-frame event sequence for all `T` time bins.
-
-For `T=8`, the event-sequence figure contains eight frames in one row.
-
-
-## Live terminal progress
-
-The reviewer launcher now runs Python in **unbuffered** mode, and detailed
-progress is enabled by default:
+For example:
 
 ```bash
 python scripts/run_setting.py --dataset dvsgesture --T 8 --B 1 --seed 0
 ```
 
-The terminal reports the current phase, including dataset loading, selected
-indices, batch construction, model allocation, parameter-memory estimate,
-forward/backward, rank diagnostics, Stage I, each Stage-I MILP solve,
-Stage II, search statistics, and final status.
-
-Use `--quiet` only when you do not want individual solver/search lines.
-
-A resource-only preflight is also available:
-
-```bash
-python scripts/preflight.py --dataset dvsgesture
-python scripts/preflight.py --dataset cifar10dvs
-```
-
-DVS128 Gesture and CIFAR10-DVS use a very large `32768 -> 7384` first
-fully connected layer. For DVS128 Gesture the full model has about
-276 million parameters: roughly 2.06 GiB for float64 parameters alone
-and 4.12 GiB for parameters plus gradients, before activations, temporal
-recordings, SVD/MILP working memory, and framework overhead. This cost
-exists even for `B=1`.
-
-For installation/debugging only, the launcher accepts optional budget
-overrides:
+will write both:
 
 ```text
---milp-time-limit SECONDS
---max-pool N
---stage2-max-nodes N
---max-sequence-solutions N
+<experiment_id>_original.png
+<experiment_id>_reconstructed.png
+<experiment_id>_original_events.png
+<experiment_id>_reconstructed_events.png
 ```
 
-Omit these options when reproducing the standard experiment configuration.
+The `*_events.png` figures show one time bin per panel, with up to 8 time bins
+per row.
+
 
 ## Methodology
 

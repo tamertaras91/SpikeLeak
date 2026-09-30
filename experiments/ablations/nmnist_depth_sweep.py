@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # SNN Gradient Leakage — Mini-Batch Experimental Harness
-# 
-# This notebook is the cleaned experimental version of the working N-MNIST mini-batch attack.
-# 
-# It keeps the existing two-stage methodology unchanged:
+
 # 
 # 1. **Stage 1 — algebraic candidate recovery**
 #    - uses only the observed FC weight/bias gradients,

@@ -8,12 +8,7 @@ Install:
 pip install -r requirements.txt
 ```
 
-The supplied source snapshots do not encode the exact historical
-`snnTorch` and `Tonic` package versions. Before public release, the authors
-should replace the unpinned entries in `requirements.txt` with the exact
-versions used for the final reported runs.
 
-The analytical experiments use `float64`.
 
 ## 2. Static check
 
