@@ -53,7 +53,7 @@ python scripts/check_repository.py
 Run one setting:
 
 ```bash
-python scripts/run_setting.py --dataset nmnist --T 8 --B 8 --seed 0
+python scripts/run_setting.py --dataset nmnist --T 8 --B 1 --milp-time-limit 300000
 ```
 
 Available dataset names:
